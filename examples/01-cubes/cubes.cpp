@@ -6,9 +6,74 @@
 #include "common.h"
 #include "bgfx_utils.h"
 #include "imgui/imgui.h"
+#include "tinyformat.h"
+
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-variable")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wmissing-field-initializers")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wshift-negative-value")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-parameter")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wextra")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wshadow")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wextra")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Waggressive-loop-optimizations")
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wmaybe-uninitialized")
+
+
+#define STB_VOXEL_RENDER_IMPLEMENTATION 1
+#define STBVOX_CONFIG_MODE 20
+//         Mode value       Meaning
+//             0               Textured blocks, 32-byte quads
+//             1               Textured blocks, 20-byte quads
+//            20               Untextured blocks, 32-byte quads
+//            21               Untextured blocks, 20-byte quads
+
+#include "stb_voxel_render.h"
+
+#include <tuple>
 
 namespace
 {
+
+constexpr uint32_t kSizeMesh{16};
+
+// Plane
+struct PosNormalVertex
+{
+	float    m_x;
+	float    m_y;
+	float    m_z;
+	uint32_t m_normal;
+
+	static void init()
+	{
+		ms_decl
+			.begin()
+			.add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+			.add(bgfx::Attrib::Normal, 4, bgfx::AttribType::Uint8, true, true)
+			.end();
+	};
+
+	static bgfx::VertexDecl ms_decl;
+};
+
+bgfx::VertexDecl PosNormalVertex::ms_decl;
+
+static PosNormalVertex s_hplaneVertices[] =
+{
+	{ -1.0f, 0.0f,  1.0f, encodeNormalRgba8(0.0f, 1.0f, 0.0f) },
+	{ 1.0f, 0.0f,  1.0f, encodeNormalRgba8(0.0f, 1.0f, 0.0f) },
+	{ -1.0f, 0.0f, -1.0f, encodeNormalRgba8(0.0f, 1.0f, 0.0f) },
+	{ 1.0f, 0.0f, -1.0f, encodeNormalRgba8(0.0f, 1.0f, 0.0f) },
+};
+
+static const uint16_t s_planeIndices[] =
+{
+	0, 1, 2,
+	1, 3, 2,
+};
+
+
+
 
 struct PosColorVertex
 {
@@ -135,10 +200,103 @@ public:
 
 		// Create program from shaders.
 		m_program = loadProgram("vs_cubes", "fs_cubes");
+		m_program2 = loadProgram("vs_plane", "fs_cubes");
+		// plane
+		PosNormalVertex::init();
+
+
+
+		m_vbh2 = bgfx::createVertexBuffer(
+			bgfx::makeRef(s_hplaneVertices, sizeof(s_hplaneVertices))
+			, PosNormalVertex::ms_decl
+		);
+
+		m_ibh2 = bgfx::createIndexBuffer(
+			bgfx::makeRef(s_planeIndices, sizeof(s_planeIndices))
+		);
 
 		m_timeOffset = bx::getHPCounter();
 
 		imguiCreate();
+
+
+		// Voxels start
+		stbvox_init_mesh_maker(&mesh_maker_);
+
+		stbvox_set_input_stride(&mesh_maker_, kSizeMesh*kSizeMesh, kSizeMesh);
+
+		buffer_size_ = 1024*16;
+		mesh_buffer_ = malloc(buffer_size_);
+		stbvox_set_buffer(&mesh_maker_, 0, 0, mesh_buffer_, buffer_size_);
+
+		auto buf_count = stbvox_get_buffer_count(&mesh_maker_);
+		tfm::printf("%s\n", buf_count);
+		printf("----------------------------------\n");
+
+		stbvox_input_description* input_descr = stbvox_get_input_description(&mesh_maker_);
+		tfm::printf("%s\n", input_descr);
+
+		constexpr unsigned numBlockTypes = 256;
+		unsigned char colorForBlockType[numBlockTypes];
+		unsigned char geomForBlockType[numBlockTypes];
+
+		for (unsigned i = 0; i < numBlockTypes; i++) {
+			colorForBlockType[i] = 0;
+			geomForBlockType[i] = STBVOX_GEOM_empty;
+		}
+		colorForBlockType[1] = 200;
+		geomForBlockType[1] = STBVOX_GEOM_solid;
+
+		// Generate sphere
+		sphere(9);
+
+		input_descr->blocktype = &blocktype_[0][0][0];
+		input_descr->rgb = &rgb_[0][0][0];
+		input_descr->lighting = &lighting_[0][0][0];
+
+		// These are indiced by block type
+		input_descr->block_geometry = geomForBlockType;
+		input_descr->block_color = colorForBlockType;
+		
+
+		stbvox_set_input_range(&mesh_maker_, 0, 0, 0, kSizeMesh, kSizeMesh, kSizeMesh);
+		
+		//tfm::printf("rgb: %d\n", rgb[2][4][kSizeMesh-1].b);
+
+		int size_per_quad = stbvox_get_buffer_size_per_quad(&mesh_maker_, 0);
+		tfm::printf("%s\n", size_per_quad);
+
+		int res = stbvox_make_mesh(&mesh_maker_);
+		tfm::printf("%d\n", res);
+	}
+
+
+	void sphere(uint radius) {
+		constexpr uint c = kSizeMesh / 2;
+		auto rsq = radius*radius;
+		for (uint x = 0; x < kSizeMesh; x++) {
+			auto x2 = (x-c) * (x-c);
+			for (uint y = 0; y < kSizeMesh; y++) {
+				auto y2 = (y-c)*(y-c);
+				for (uint z = 0; z < kSizeMesh; z++) {
+					auto z2 = (z-c)*(z-c);
+					if (x2 + y2 + z2 <= rsq)
+						set_voxel_color(std::make_tuple(x,y,z), {200, 20, 100});
+				}
+			}
+		}
+		
+	}
+	
+
+	void set_voxel_color(std::tuple<uint, uint, uint> pos, stbvox_rgb color) {
+		using namespace std;
+		uint x, y, z;
+		tie(x, y, z) = pos;
+		rgb_[x][y][z] = color;
+		blocktype_[x][y][z] = 1;
+	// blocktype_[x][y][z] = STBVOX_GEOM_solid;
+		lighting_[x][y][z] = 255;
 	}
 
 	virtual int shutdown() override
@@ -196,8 +354,11 @@ public:
 
 			float time = (float)( (bx::getHPCounter()-m_timeOffset)/double(bx::getHPFrequency() ) );
 
-			float at[3]  = { 0.0f, 0.0f,   0.0f };
-			float eye[3] = { 0.0f, 0.0f, -35.0f };
+			//float at[3]  = { 0.0f, 0.0f,   0.0f };
+			//float eye[3] = { 0.0f, 0.0f, -35.0f };
+
+			float eye[3] = { 0.0f, 30.0f, -60.0f };
+			float at[3] = { 0.0f,  5.0f,   0.0f };
 
 			// Set view and projection matrix for view 0.
 			const bgfx::HMD* hmd = bgfx::getHMD();
@@ -231,18 +392,27 @@ public:
 			bgfx::touch(0);
 
 			// Submit 11x11 cubes.
-			for (uint32_t yy = 0; yy < 11; ++yy)
+			for (uint32_t yy = 0; yy < 1; ++yy)
 			{
-				for (uint32_t xx = 0; xx < 11; ++xx)
+				for (uint32_t xx = 0; xx < 1; ++xx)
 				{
-					float mtx[16];
-					bx::mtxRotateXY(mtx, time + xx*0.21f, time + yy*0.37f);
-					mtx[12] = -15.0f + float(xx)*3.0f;
-					mtx[13] = -15.0f + float(yy)*3.0f;
-					mtx[14] = 0.0f;
+					//float mtx[16];
+					float mtxPos[16];
+					bx::mtxRotateXY(mtxPos, time + xx * 0.21f, time + yy * 0.37f);
+					//mtxPos[12] = -15.0f + float(xx)*3.0f;
+					//mtxPos[13] = -15.0f + float(yy)*3.0f;
+
+					mtxPos[14] = 0.0f;
+
+					float mtxScale[16];
+					bx::mtxScale(mtxScale, 3.0);
+
+					float modelView[16];
+
+					bx::mtxMul(modelView, mtxScale, mtxPos);
 
 					// Set model matrix for rendering.
-					bgfx::setTransform(mtx);
+					bgfx::setTransform(modelView, 1);
 
 					// Set vertex and index buffer.
 					bgfx::setVertexBuffer(0, m_vbh);
@@ -266,6 +436,29 @@ public:
 				}
 			}
 
+			float mtxFloor[16];
+			bx::mtxSRT(mtxFloor
+				, 30.0f, 30.0f, 30.0f
+				, 0.0f, 0.0f, 0.0f
+				, 0.0f, -10.0f, 0.0f
+			);
+
+			bgfx::setTransform(mtxFloor, 1);
+
+			bgfx::setVertexBuffer(0, m_vbh2);
+			bgfx::setIndexBuffer(m_ibh2);
+
+			uint64_t state = 0
+				| BGFX_STATE_WRITE_RGB
+				| BGFX_STATE_WRITE_A
+				| BGFX_STATE_WRITE_Z
+				| BGFX_STATE_DEPTH_TEST_LESS
+				| BGFX_STATE_CULL_CCW
+				| BGFX_STATE_MSAA
+				;
+			bgfx::setState(state);
+			bgfx::submit(0, m_program2);
+
 			// Advance to next frame. Rendering thread will be kicked to
 			// process submitted rendering primitives.
 			bgfx::frame();
@@ -282,15 +475,26 @@ public:
 	uint32_t m_height;
 	uint32_t m_debug;
 	uint32_t m_reset;
-	bgfx::VertexBufferHandle m_vbh;
-	bgfx::IndexBufferHandle m_ibh;
-	bgfx::ProgramHandle m_program;
+	bgfx::VertexBufferHandle m_vbh, m_vbh2;
+	bgfx::IndexBufferHandle m_ibh, m_ibh2;
+	bgfx::ProgramHandle m_program, m_program2;
 	int64_t m_timeOffset;
 
 	bool m_r;
 	bool m_g;
 	bool m_b;
 	bool m_a;
+
+	// Voxels
+	stbvox_mesh_maker mesh_maker_;
+	void* mesh_buffer_ {nullptr};
+	u_int32_t buffer_size_ {0};
+
+	stbvox_rgb rgb_[kSizeMesh][kSizeMesh][kSizeMesh]{};
+	stbvox_block_type blocktype_[kSizeMesh][kSizeMesh][kSizeMesh]{};
+	unsigned char lighting_[kSizeMesh][kSizeMesh][kSizeMesh]{};
+		
+
 };
 
 } // namespace
