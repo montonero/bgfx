@@ -6,7 +6,9 @@
 #include "common.h"
 #include "bgfx_utils.h"
 #include "imgui/imgui.h"
-#include "tinyformat.h"
+
+
+BX_PRAGMA_DIAGNOSTIC_PUSH()
 
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-variable")
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wmissing-field-initializers")
@@ -17,6 +19,16 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wshadow")
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wextra")
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Waggressive-loop-optimizations")
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wmaybe-uninitialized")
+
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244)
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4127)
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4189)
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4310)
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4100)
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4456)
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4267)
+
+#include "tinyformat.h"
 
 
 #define STB_VOXEL_RENDER_IMPLEMENTATION 1
@@ -29,12 +41,19 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wmaybe-uninitialized")
 
 #include "stb_voxel_render.h"
 
+
+BX_PRAGMA_DIAGNOSTIC_POP()
+
 #include <tuple>
+
+#define uint unsigned
 
 namespace
 {
 
 constexpr uint32_t kSizeMesh{16};
+
+constexpr uint32_t kSizeMeshPlus2 = kSizeMesh + 2;
 
 // Plane
 struct PosNormalVertex
@@ -223,10 +242,14 @@ public:
 		// Voxels start
 		stbvox_init_mesh_maker(&mesh_maker_);
 
-		stbvox_set_input_stride(&mesh_maker_, kSizeMesh*kSizeMesh, kSizeMesh);
+		stbvox_set_input_stride(&mesh_maker_, kSizeMeshPlus2*kSizeMeshPlus2, kSizeMeshPlus2);
 
-		buffer_size_ = 1024*16;
+		buffer_size_ = 1024*32*8;
 		mesh_buffer_ = malloc(buffer_size_);
+		memset(mesh_buffer_, 0, buffer_size_);
+		uint32_t* mb = (uint32_t*)mesh_buffer_;
+		assert(mb);
+		assert(sizeof(stbvox_mesh_vertex) == sizeof(uint32_t));
 		stbvox_set_buffer(&mesh_maker_, 0, 0, mesh_buffer_, buffer_size_);
 
 		auto buf_count = stbvox_get_buffer_count(&mesh_maker_);
@@ -244,15 +267,17 @@ public:
 			colorForBlockType[i] = 0;
 			geomForBlockType[i] = STBVOX_GEOM_empty;
 		}
-		colorForBlockType[1] = 200;
+		// 0..63
+		colorForBlockType[1] = 63;
 		geomForBlockType[1] = STBVOX_GEOM_solid;
 
 		// Generate sphere
 		sphere(9);
 
-		input_descr->blocktype = &blocktype_[0][0][0];
-		input_descr->rgb = &rgb_[0][0][0];
-		input_descr->lighting = &lighting_[0][0][0];
+		// Stb voxel needs to access -1 voxels
+		input_descr->blocktype = &blocktype_[1][1][1];
+		input_descr->rgb = &rgb_[1][1][1]; 
+		input_descr->lighting = &lighting_[1][1][1];
 
 		// These are indiced by block type
 		input_descr->block_geometry = geomForBlockType;
@@ -272,6 +297,7 @@ public:
 
 
 	void sphere(uint radius) {
+		int counter{ 0 };
 		constexpr uint c = kSizeMesh / 2;
 		auto rsq = radius*radius;
 		for (uint x = 0; x < kSizeMesh; x++) {
@@ -280,11 +306,14 @@ public:
 				auto y2 = (y-c)*(y-c);
 				for (uint z = 0; z < kSizeMesh; z++) {
 					auto z2 = (z-c)*(z-c);
-					if (x2 + y2 + z2 <= rsq)
-						set_voxel_color(std::make_tuple(x,y,z), {200, 20, 100});
+					if (x2 + y2 + z2 <= rsq) {
+						set_voxel_color(std::make_tuple(x + 1, y + 1, z + 1), { 200, 20, 100 });
+						counter++;
+					}
 				}
 			}
 		}
+		tfm::printf("Num of voxels: %d", counter);
 		
 	}
 	
@@ -488,11 +517,11 @@ public:
 	// Voxels
 	stbvox_mesh_maker mesh_maker_;
 	void* mesh_buffer_ {nullptr};
-	u_int32_t buffer_size_ {0};
+	unsigned buffer_size_ {0};
 
-	stbvox_rgb rgb_[kSizeMesh][kSizeMesh][kSizeMesh]{};
-	stbvox_block_type blocktype_[kSizeMesh][kSizeMesh][kSizeMesh]{};
-	unsigned char lighting_[kSizeMesh][kSizeMesh][kSizeMesh]{};
+	stbvox_rgb rgb_[kSizeMeshPlus2][kSizeMeshPlus2][kSizeMeshPlus2]{};
+	stbvox_block_type blocktype_[kSizeMeshPlus2][kSizeMeshPlus2][kSizeMeshPlus2]{};
+	unsigned char lighting_[kSizeMeshPlus2][kSizeMeshPlus2][kSizeMeshPlus2]{};
 		
 
 };
