@@ -280,8 +280,8 @@ public:
 		input_descr->lighting = &lighting_[1][1][1];
 
 		// These are indiced by block type
-		input_descr->block_geometry = geomForBlockType;
-		input_descr->block_color = colorForBlockType;
+		//input_descr->block_geometry = geomForBlockType;
+		//input_descr->block_color = colorForBlockType;
 		
 
 		stbvox_set_input_range(&mesh_maker_, 0, 0, 0, kSizeMesh, kSizeMesh, kSizeMesh);
@@ -293,6 +293,8 @@ public:
 
 		int res = stbvox_make_mesh(&mesh_maker_);
 		tfm::printf("%d\n", res);
+		std::ptrdiff_t num_vertices = ((std::ptrdiff_t)mesh_maker_.output_cur[0][0] - (std::ptrdiff_t)mesh_maker_.output_buffer[0][0]) / 32;
+		tfm::printf("Total number vertices: %d", num_vertices);
 	}
 
 

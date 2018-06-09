@@ -2644,8 +2644,11 @@ static unsigned char stbvox_face_up_normal_123[4][4][4] =
 };
 #endif
 
+static int totalNumFaces = 0;
+
 void stbvox_get_quad_vertex_pointer(stbvox_mesh_maker *mm, int mesh, stbvox_mesh_vertex **vertices, stbvox_mesh_face face)
 {
+	totalNumFaces++;
    char *p = mm->output_cur[mesh][0];
    int step = mm->output_step[mesh][0];
 
@@ -3512,6 +3515,7 @@ int stbvox_make_mesh(stbvox_mesh_maker *mm)
          }
       }
    }
+   printf("total number faces %d", totalNumFaces);
    return 1;
 }
 
