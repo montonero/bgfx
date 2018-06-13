@@ -55,6 +55,123 @@ constexpr uint32_t kSizeMesh{16};
 
 constexpr uint32_t kSizeMeshPlus2 = kSizeMesh + 2;
 
+
+inline uint32_t toUnorm(float _value)
+{
+	return uint32_t(bx::round(bx::clamp(_value, 0.0f, 255.0f) ) );
+}
+
+
+// RGBA8
+inline void packRgba8(void* _dst, const uint8_t* _src)
+{
+	uint8_t* dst = (uint8_t*)_dst;
+	dst[0] = (_src[0]);
+	dst[1] = (_src[1]) ;
+	dst[2] = (_src[2]) ;
+	dst[3] = (_src[3]);
+}
+
+
+///
+inline uint32_t encodeRgba8(uint8_t _x, uint8_t _y = 0, uint8_t _z = 0, uint8_t _w = 0)
+{
+	const uint8_t src[] =
+	{
+		_x ,
+		_y,
+		_z,
+		_w ,
+	};
+	uint32_t dst;
+	packRgba8(&dst, src);
+	return dst;
+}
+
+constexpr std::int32_t ceil(float num) {
+    std::int32_t inum = static_cast<std::int32_t>(num);
+    if (num == static_cast<float>(inum)) {
+        return inum;
+    }
+    return inum + (num > 0 ? 1 : 0);
+}
+
+constexpr std::uint8_t ceil255(float num) {
+	return ceil(bx::clamp(num, 0.f, 1.f)*255.f);
+}
+
+// pack 3 floats in 0.0 .. 1.0 range into 32 bits
+constexpr uint32_t packRgb8f(float r, float g, float b) {
+	uint8_t r8 = ceil255(r);
+	uint8_t g8 = ceil255(g);
+	uint8_t b8 = ceil255(b);
+	return (uint32_t) r8 + (g8 << 8) + (b8 << 16);
+}
+
+constexpr uint32_t packRgb8(uint8_t x, uint8_t y, uint8_t z) {
+	return (uint32_t) (x+(y<<8)+(z<<16));
+}
+
+// Plane 2 with packed data
+
+struct PosColorVertexPacked
+{
+	float    m_x;
+	float    m_y;
+	float    m_z;
+	// uint32_t pos_;
+	uint32_t normal_;
+
+	static void init()
+	{
+		ms_decl.begin()
+			// .add(bgfx::Attrib::Position, 4, bgfx::AttribType::Uint8, false, true)
+			.add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+			.add(bgfx::Attrib::Color1, 4, bgfx::AttribType::Uint8, false, false)
+			.end();
+	}
+	static bgfx::VertexDecl ms_decl;
+};
+
+bgfx::VertexDecl PosColorVertexPacked::ms_decl;
+
+/*
+constexpr PosColorVertexPacked encode_vertex99(int8_t x,int8_t y,int8_t z,int8_t r,int8_t g,int8_t b) {
+	return {stbvox_vertex_encode((x), (y), (z), 0, 0), packRgb8(r,g,b)};
+}
+*/
+
+/*
+constexpr PosColorVertexPacked encode_vertex1(int8_t x,int8_t y,int8_t z,int8_t r,int8_t g,int8_t b) {
+	return { packRgb8(x,y,z), packRgb8f(r,g,b)};
+}
+*/
+
+constexpr PosColorVertexPacked encode_vertex(int8_t x,int8_t y,int8_t z,int8_t r,int8_t g,int8_t b) {
+	return { float(x)*0.5f, float(y)*0.5f, float(z)*0.5f, packRgb8f(r,g,b)};
+}
+
+
+static PosColorVertexPacked s_voxelVerts[] = 
+{
+	encode_vertex(-1., 0, 0, 1, 1,0),
+	encode_vertex(1, 0, 0, 1, 0, 0),
+	encode_vertex(1, 1, 0, 1,0,0),
+	encode_vertex(0, 1, 0, 1, 0, 0)
+};
+
+
+static const uint16_t s_voxelIndices[] =
+{
+	0, 1, 2,
+	0, 3, 2,
+};
+
+constexpr uint32_t tmp1 = packRgb8f(0.f,1.f,7.f);
+constexpr uint32_t tmpx = packRgb8f(1, 0,0);
+constexpr PosColorVertexPacked tmp2 = encode_vertex(1, 1, 0, 1, 0,0);
+
+
 // Plane
 struct PosNormalVertex
 {
@@ -173,6 +290,10 @@ public:
 
 	void init(int32_t _argc, const char* const* _argv, uint32_t _width, uint32_t _height) override
 	{
+		//tfm::printf("%d", s_voxelVerts[0].pos_);
+		//bx::packRgb8
+		tfm::printf("%d  %d\n", s_voxelVerts[0].normal_, s_voxelVerts[1].normal_);
+
 		BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 
 		Args args(_argc, _argv);
@@ -234,6 +355,13 @@ public:
 			bgfx::makeRef(s_planeIndices, sizeof(s_planeIndices))
 		);
 
+
+		/// 33
+		PosColorVertexPacked::init();
+		vbh_voxel_ = bgfx::createVertexBuffer(bgfx::makeRef(s_voxelVerts, sizeof(s_voxelVerts)), PosColorVertexPacked::ms_decl);
+		ibh_voxel_ = bgfx::createIndexBuffer(bgfx::makeRef(s_voxelIndices, sizeof(s_voxelIndices)));
+		program_voxel_ = loadProgram("vs_voxel", "fs_cubes");
+
 		m_timeOffset = bx::getHPCounter();
 
 		imguiCreate();
@@ -247,8 +375,8 @@ public:
 		buffer_size_ = 1024*32*8;
 		mesh_buffer_ = malloc(buffer_size_);
 		memset(mesh_buffer_, 0, buffer_size_);
-		uint32_t* mb = (uint32_t*)mesh_buffer_;
-		assert(mb);
+		//uint32_t* mb = (uint32_t*)mesh_buffer_;
+		//assert(mb);
 		assert(sizeof(stbvox_mesh_vertex) == sizeof(uint32_t));
 		stbvox_set_buffer(&mesh_maker_, 0, 0, mesh_buffer_, buffer_size_);
 
@@ -259,7 +387,10 @@ public:
 		stbvox_input_description* input_descr = stbvox_get_input_description(&mesh_maker_);
 		tfm::printf("%s\n", input_descr);
 
+		#ifdef USE_BLOCK_TYPES
 		constexpr unsigned numBlockTypes = 256;
+
+		
 		unsigned char colorForBlockType[numBlockTypes];
 		unsigned char geomForBlockType[numBlockTypes];
 
@@ -270,6 +401,7 @@ public:
 		// 0..63
 		colorForBlockType[1] = 63;
 		geomForBlockType[1] = STBVOX_GEOM_solid;
+		#endif
 
 		// Generate sphere
 		sphere(9);
@@ -279,10 +411,11 @@ public:
 		input_descr->rgb = &rgb_[1][1][1]; 
 		input_descr->lighting = &lighting_[1][1][1];
 
+		#ifdef USE_BLOCK_TYPES
 		// These are indiced by block type
-		//input_descr->block_geometry = geomForBlockType;
-		//input_descr->block_color = colorForBlockType;
-		
+		input_descr->block_geometry = geomForBlockType;
+		input_descr->blockze_color = colorForBlockType;
+		#endif
 
 		stbvox_set_input_range(&mesh_maker_, 0, 0, 0, kSizeMesh, kSizeMesh, kSizeMesh);
 		
@@ -294,7 +427,7 @@ public:
 		int res = stbvox_make_mesh(&mesh_maker_);
 		tfm::printf("%d\n", res);
 		std::ptrdiff_t num_vertices = ((std::ptrdiff_t)mesh_maker_.output_cur[0][0] - (std::ptrdiff_t)mesh_maker_.output_buffer[0][0]) / 32;
-		tfm::printf("Total number vertices: %d", num_vertices);
+		tfm::printf("Total number vertices: %d\n", num_vertices);
 	}
 
 
@@ -490,6 +623,35 @@ public:
 			bgfx::setState(state);
 			bgfx::submit(0, m_program2);
 
+			state = 0
+				| BGFX_STATE_WRITE_RGB
+				| BGFX_STATE_WRITE_A
+				| BGFX_STATE_WRITE_Z
+				| BGFX_STATE_DEPTH_TEST_NEVER
+				;
+
+
+			float mtxIdentity[16];
+			bx::mtxIdentity(mtxIdentity);
+			
+			bgfx::setTransform(mtxIdentity, 1);
+
+			bgfx::setVertexBuffer(0, vbh_voxel_);
+			bgfx::setIndexBuffer(ibh_voxel_);
+
+			//bgfx::setState(state);
+
+			bgfx::setState(0
+						| BGFX_STATE_WRITE_RGB
+						| BGFX_STATE_WRITE_Z
+						| BGFX_STATE_DEPTH_TEST_LESS
+						//| BGFX_STATE_CULL_CW
+						| BGFX_STATE_MSAA
+						//| BGFX_STATE_PT_TRISTRIP
+						);
+
+			bgfx::submit(0, program_voxel_);
+
 			// Advance to next frame. Rendering thread will be kicked to
 			// process submitted rendering primitives.
 			bgfx::frame();
@@ -506,9 +668,9 @@ public:
 	uint32_t m_height;
 	uint32_t m_debug;
 	uint32_t m_reset;
-	bgfx::VertexBufferHandle m_vbh, m_vbh2;
-	bgfx::IndexBufferHandle m_ibh, m_ibh2;
-	bgfx::ProgramHandle m_program, m_program2;
+	bgfx::VertexBufferHandle m_vbh, m_vbh2, vbh_voxel_;
+	bgfx::IndexBufferHandle m_ibh, m_ibh2, ibh_voxel_;
+	bgfx::ProgramHandle m_program, m_program2, program_voxel_;
 	int64_t m_timeOffset;
 
 	bool m_r;

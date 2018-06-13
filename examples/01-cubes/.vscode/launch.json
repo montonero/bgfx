@@ -1,0 +1,72 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+        {
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "enter program name, for example ${workspaceFolder}/a.out",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+		{
+			"name": "Launch (gdb)",
+			"type": "cppdbg",
+			"request": "launch",
+			"preLaunchTask": "Build debug",
+			"cwd": "${workspaceRoot}/../runtime",
+			"MIMode": "gdb",
+			"linux": {
+				"miDebuggerPath": "/usr/bin/gdb",
+                "program": "${workspaceRoot}/../../.build/linux64_gcc/bin/examplesDebug"
+			},
+			"windows": {
+				"miDebuggerPath": "C:/MinGW/bin/gdb.exe",
+				"program": "${workspaceRoot}/bin/debug/main.exe"
+			},
+			"externalConsole": true
+		},
+        {
+			"name": "Launch release (gdb)",
+			"type": "cppdbg",
+			"request": "launch",
+			"preLaunchTask": "Build release",
+			"cwd": "${workspaceRoot}/../runtime",
+			"MIMode": "gdb",
+			"linux": {
+				"miDebuggerPath": "/usr/bin/gdb",
+                "program": "${workspaceRoot}/../../.build/linux64_gcc/bin/examplesRelease"
+                // "program": "${workspaceRoot}/../../.build/linux64_gcc/bin/examplesDebug"
+			},
+			"windows": {
+				"miDebuggerPath": "C:/MinGW/bin/gdb.exe",
+				"program": "${workspaceRoot}/bin/debug/main.exe"
+			},
+			// "externalConsole": true
+		},
+		{
+			"name": "Attach (gdb)",
+			"type": "cppdbg",
+			"request": "attach",
+			"processId": "${command:pickProcess}",
+			"MIMode": "gdb",
+			"linux": {
+				"miDebuggerPath": "/usr/bin/gdb"
+			},
+			"windows": {
+				"miDebuggerPath": "C:/MinGW/bin/gdb.exe"
+			}
+		}
+	]
+}
