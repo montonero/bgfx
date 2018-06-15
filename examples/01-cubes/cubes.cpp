@@ -97,7 +97,7 @@ constexpr std::int32_t ceil(float num) {
 }
 
 constexpr std::uint8_t ceil255(float num) {
-	return ceil(bx::clamp(num, 0.f, 1.f)*255.f);
+	return uint8_t(ceil(bx::clamp(num, 0.f, 1.f)*255.f));
 }
 
 // pack 3 floats in 0.0 .. 1.0 range into 32 bits
@@ -154,7 +154,7 @@ constexpr PosColorVertexPacked encode_vertex(int8_t x,int8_t y,int8_t z,int8_t r
 
 static PosColorVertexPacked s_voxelVerts[] = 
 {
-	encode_vertex(-1., 0, 0, 1, 1,0),
+	encode_vertex(-1, 0, 0, 1, 1,0),
 	encode_vertex(1, 0, 0, 1, 0, 0),
 	encode_vertex(1, 1, 0, 1,0,0),
 	encode_vertex(0, 1, 0, 1, 0, 0)
@@ -167,9 +167,9 @@ static const uint16_t s_voxelIndices[] =
 	0, 3, 2,
 };
 
-constexpr uint32_t tmp1 = packRgb8f(0.f,1.f,7.f);
+constexpr uint32_t tmp1x = packRgb8f(0.f,1.f,7.f);
 constexpr uint32_t tmpx = packRgb8f(1, 0,0);
-constexpr PosColorVertexPacked tmp2 = encode_vertex(1, 1, 0, 1, 0,0);
+constexpr PosColorVertexPacked tmp2x = encode_vertex(1, 1, 0, 1, 0,0);
 
 
 // Plane
