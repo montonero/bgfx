@@ -406,7 +406,7 @@ end
 dofile "bgfx.lua"
 
 group "libs"
-bgfxProject("", "StaticLib", {})
+bgfxProject("", "StaticLib",  { "BGFX_CONFIG_RENDERER_OPENGL=44" })
 
 dofile(path.join(BX_DIR,   "scripts/bx.lua"))
 dofile(path.join(BIMG_DIR, "scripts/bimg.lua"))

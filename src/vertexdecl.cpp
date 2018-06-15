@@ -13,6 +13,8 @@
 #include "config.h"
 #include "vertexdecl.h"
 
+#include <cstdio>
+
 namespace bgfx
 {
 	static const uint8_t s_attribTypeSizeD3D9[AttribType::Count][4] =
@@ -388,6 +390,7 @@ namespace bgfx
 		case AttribType::Uint8:
 			{
 				uint8_t* packed = (uint8_t*)data;
+				printf("vertexPack in:\n%.2f %.2f %.2f", _input[0], _input[1], _input[2]);
 				if (_inputNormalized)
 				{
 					if (asInt)
@@ -421,6 +424,7 @@ namespace bgfx
 					case 1:  *packed++ = uint8_t(*_input++);
 					}
 				}
+				printf("vertexPack in:\n%d %d %d", packed[0], packed[1], packed[2]);
 			}
 			break;
 
