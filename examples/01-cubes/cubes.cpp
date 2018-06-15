@@ -7,6 +7,8 @@
 #include "bgfx_utils.h"
 #include "imgui/imgui.h"
 
+#include "sphere.hpp"
+
 
 BX_PRAGMA_DIAGNOSTIC_PUSH()
 
@@ -120,14 +122,14 @@ struct PosColorVertexPacked
 	float    m_y;
 	float    m_z;
 	// uint32_t pos_;
-	uint32_t normal_;
+	uint32_t color;
 
 	static void init()
 	{
 		ms_decl.begin()
 			// .add(bgfx::Attrib::Position, 4, bgfx::AttribType::Uint8, false, true)
 			.add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
-			.add(bgfx::Attrib::Color1, 4, bgfx::AttribType::Uint8, false, false)
+			.add(bgfx::Attrib::Color1, 4, bgfx::AttribType::Uint8, false, true)
 			.end();
 	}
 	static bgfx::VertexDecl ms_decl;
@@ -154,10 +156,10 @@ constexpr PosColorVertexPacked encode_vertex(int8_t x,int8_t y,int8_t z,int8_t r
 
 static PosColorVertexPacked s_voxelVerts[] = 
 {
-	encode_vertex(-1., 0, 0, 1, 1,0),
-	encode_vertex(1, 0, 0, 1, 0, 0),
-	encode_vertex(1, 1, 0, 1,0,0),
-	encode_vertex(0, 1, 0, 1, 0, 0)
+	encode_vertex(-1., 0, 0, 1, 1,1),
+	encode_vertex(1, 0, 0, 1, 1, 1),
+	encode_vertex(1, 1, 0, 1,1,1),
+	encode_vertex(0, 1, 0, 1, 1, 1)
 };
 
 
@@ -209,8 +211,26 @@ static const uint16_t s_planeIndices[] =
 };
 
 
+struct PositionOnlyVertex {
+	float x;
+	float y;
+	float z;
 
+	
 
+	static void init() {
+		ms_decl.begin()
+			.add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+			.end();
+	};
+
+	static bgfx::VertexDecl ms_decl;
+};
+
+bgfx::VertexDecl PositionOnlyVertex::ms_decl;
+
+// #define NOSPHERE
+#ifdef NOSPHERE
 struct PosColorVertex
 {
 	float m_x;
@@ -276,6 +296,8 @@ static const uint16_t s_cubeTriStrip[] =
 	5,
 };
 
+#endif
+
 class ExampleCubes : public entry::AppI
 {
 public:
@@ -290,11 +312,17 @@ public:
 
 	void init(int32_t _argc, const char* const* _argv, uint32_t _width, uint32_t _height) override
 	{
+
+		auto sphere_ = make_icosphere(1);
+		tfm::printf("No vertices: %d\n", sphere_.first.size());
+		auto sphereVert = sphere_.first;
+		auto sphereInd = sphere_.second;
+
 		//tfm::printf("%d", s_voxelVerts[0].pos_);
 		//bx::packRgb8
-		tfm::printf("%d  %d\n", s_voxelVerts[0].normal_, s_voxelVerts[1].normal_);
+		tfm::printf("%d  %d\n", s_voxelVerts[0].color, s_voxelVerts[1].color);
 
-		BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
+		
 
 		Args args(_argc, _argv);
 
@@ -322,6 +350,9 @@ public:
 				, 0
 				);
 
+
+#ifdef NOSPHERE
+BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 		// Create vertex stream declaration.
 		PosColorVertex::init();
 
@@ -337,10 +368,25 @@ public:
 				// Static data can be passed with bgfx::makeRef
 				bgfx::makeRef(s_cubeTriStrip, sizeof(s_cubeTriStrip) )
 				);
+#else
 
+		//bgfx::copy 
+		PositionOnlyVertex::init();
+		m_vbh = bgfx::createVertexBuffer(
+			bgfx::copy(&sphereVert[0], sizeof(sphereVert[0])*sphereVert.size()),
+			PositionOnlyVertex::ms_decl
+		);
+
+		m_ibh = bgfx::createIndexBuffer(
+			bgfx::copy(&sphereInd[0], sizeof(sphereInd[0])*sphereInd.size())
+		);
+#endif
 		// Create program from shaders.
 		m_program = loadProgram("vs_cubes", "fs_cubes");
 		m_program2 = loadProgram("vs_plane", "fs_cubes");
+
+
+
 		// plane
 		PosNormalVertex::init();
 
@@ -357,9 +403,14 @@ public:
 
 
 		/// 33
+
 		PosColorVertexPacked::init();
-		vbh_voxel_ = bgfx::createVertexBuffer(bgfx::makeRef(s_voxelVerts, sizeof(s_voxelVerts)), PosColorVertexPacked::ms_decl);
-		ibh_voxel_ = bgfx::createIndexBuffer(bgfx::makeRef(s_voxelIndices, sizeof(s_voxelIndices)));
+		
+		vbh_voxel_ = bgfx::createVertexBuffer(
+			bgfx::makeRef(s_voxelVerts, sizeof(s_voxelVerts)),
+			PosColorVertexPacked::ms_decl);
+		ibh_voxel_ = bgfx::createIndexBuffer(
+			bgfx::makeRef(s_voxelIndices, sizeof(s_voxelIndices)));
 		program_voxel_ = loadProgram("vs_voxel", "fs_cubes");
 
 		m_timeOffset = bx::getHPCounter();
@@ -569,7 +620,7 @@ public:
 					mtxPos[14] = 0.0f;
 
 					float mtxScale[16];
-					bx::mtxScale(mtxScale, 3.0);
+					bx::mtxScale(mtxScale, 6.0);
 
 					float modelView[16];
 
@@ -591,6 +642,7 @@ public:
 						| BGFX_STATE_WRITE_Z
 						| BGFX_STATE_DEPTH_TEST_LESS
 						| BGFX_STATE_CULL_CW
+						// | BGFX_STATE_CULL_CCW
 						| BGFX_STATE_MSAA
 						| BGFX_STATE_PT_TRISTRIP
 						);
@@ -600,6 +652,7 @@ public:
 				}
 			}
 
+			#if 0
 			float mtxFloor[16];
 			bx::mtxSRT(mtxFloor
 				, 30.0f, 30.0f, 30.0f
@@ -622,13 +675,7 @@ public:
 				;
 			bgfx::setState(state);
 			bgfx::submit(0, m_program2);
-
-			state = 0
-				| BGFX_STATE_WRITE_RGB
-				| BGFX_STATE_WRITE_A
-				| BGFX_STATE_WRITE_Z
-				| BGFX_STATE_DEPTH_TEST_NEVER
-				;
+			#endif
 
 
 			float mtxIdentity[16];
@@ -640,7 +687,7 @@ public:
 			bgfx::setIndexBuffer(ibh_voxel_);
 
 			//bgfx::setState(state);
-
+#if 0
 			bgfx::setState(0
 						| BGFX_STATE_WRITE_RGB
 						| BGFX_STATE_WRITE_Z
@@ -648,6 +695,17 @@ public:
 						//| BGFX_STATE_CULL_CW
 						| BGFX_STATE_MSAA
 						//| BGFX_STATE_PT_TRISTRIP
+						);
+#endif
+
+			bgfx::setState(0
+						| BGFX_STATE_WRITE_RGB
+						| BGFX_STATE_WRITE_Z
+						| BGFX_STATE_DEPTH_TEST_LESS
+						| BGFX_STATE_CULL_CW
+						// | BGFX_STATE_CULL_CCW
+						| BGFX_STATE_MSAA
+						| BGFX_STATE_PT_TRISTRIP
 						);
 
 			bgfx::submit(0, program_voxel_);
