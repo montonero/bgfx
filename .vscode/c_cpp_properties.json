@@ -1,0 +1,34 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "/usr/include/c++/5.4.0",
+                "/usr/include/x86_64-linux-gnu/c++/5.4.0",
+                "/usr/local/include",
+                "/usr/include",
+                "/usr/include/x86_64-linux-gnu",
+                
+                "${workspaceRoot}/../bx/include",
+                "${workspaceRoot}/../bimg/include",
+                "${workspaceRoot}/include",
+                "${workspaceRoot}/3rdparty"
+            ],
+            "defines": [],
+            "intelliSenseMode": "clang-x64",
+
+
+            "browse": {
+                "path": [
+                    "${workspaceRoot}/../bx/include",
+                    "${workspaceRoot}/../bimg/include",
+                    "${workspaceRoot}/include",
+                    "${workspaceRoot}/3rdparty"
+                ],
+                "limitSymbolsToIncludedHeaders": true,
+                "databaseFilename": ""
+            }
+        }
+    ],
+    "version": 4
+}
