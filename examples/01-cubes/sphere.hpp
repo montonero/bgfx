@@ -1,9 +1,10 @@
 
 #include <map>
 #include <vector>
-#include <cmath> 
+#include <cmath>
+#include <array>
 
-using Index = std::uint16_t;
+using Index = std::uint32_t;
 
 struct v3{
     float x;
@@ -61,7 +62,7 @@ Index vertex_for_edge(Lookup& lookup,
   if (key.first>key.second)
     std::swap(key.first, key.second);
  
-  auto inserted=lookup.insert({key, vertices.size()});
+  auto inserted=lookup.insert({key, (Index)vertices.size()});
   if (inserted.second)
   {
     auto& edge0=vertices[first];

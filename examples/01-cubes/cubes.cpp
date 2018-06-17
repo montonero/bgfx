@@ -111,7 +111,12 @@ constexpr uint32_t packRgb8f(float r, float g, float b) {
 }
 
 constexpr uint32_t packRgb8(uint8_t x, uint8_t y, uint8_t z) {
-	return (uint32_t) (x+(y<<8)+(z<<16));
+	return (uint32_t)(x + ((uint32_t)y << 8) + ((uint32_t)z << 16));
+}
+
+
+constexpr uint32_t packRgb8_255(uint8_t x, uint8_t y, uint8_t z) {
+	return (uint32_t)((uint32_t)x*255  + (((uint32_t)y*255) << 8) + (((uint32_t)z*255) << 16));
 }
 
 // Plane 2 with packed data
@@ -149,17 +154,17 @@ constexpr PosColorVertexPacked encode_vertex1(int8_t x,int8_t y,int8_t z,int8_t 
 }
 */
 
-constexpr PosColorVertexPacked encode_vertex(int8_t x,int8_t y,int8_t z,int8_t r,int8_t g,int8_t b) {
-	return { float(x)*0.5f, float(y)*0.5f, float(z)*0.5f, packRgb8f(r,g,b)};
+constexpr PosColorVertexPacked encode_vertex(int8_t x,int8_t y,int8_t z,uint8_t r,uint8_t g,uint8_t b) {
+	return { float(x)*0.5f, float(y)*0.5f, float(z)*0.5f, packRgb8(r,g,b)};
 }
 
 
 static PosColorVertexPacked s_voxelVerts[] = 
 {
-	encode_vertex(-1, 0, 0, 1, 1,0),
-	encode_vertex(1, 0, 0, 1, 0, 0),
-	encode_vertex(1, 1, 0, 1,0,0),
-	encode_vertex(0, 1, 0, 1, 0, 0)
+	encode_vertex(-1, 0, 0, 100, 55, 250),
+	encode_vertex(1, 0, 0, 110, 55, 250),
+	encode_vertex(1, 1, 0, 110, 55, 250),
+	encode_vertex(0, 1, 0, 110, 55, 250)
 };
 
 
@@ -312,6 +317,8 @@ public:
 
 	void init(int32_t _argc, const char* const* _argv, uint32_t _width, uint32_t _height) override
 	{
+		auto szvp = sizeof(PosColorVertexPacked);
+		tfm::printf("Size of PosColorVertexPacked: %d", szvp);
 
 		auto sphere_ = make_icosphere(1);
 		tfm::printf("No vertices: %d\n", sphere_.first.size());
@@ -373,12 +380,12 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 		//bgfx::copy 
 		PositionOnlyVertex::init();
 		m_vbh = bgfx::createVertexBuffer(
-			bgfx::copy(&sphereVert[0], sizeof(sphereVert[0])*sphereVert.size()),
+			bgfx::copy(&sphereVert[0], sizeof(sphereVert[0])*((uint32_t)sphereVert.size())),
 			PositionOnlyVertex::ms_decl
 		);
 
 		m_ibh = bgfx::createIndexBuffer(
-			bgfx::copy(&sphereInd[0], sizeof(sphereInd[0])*sphereInd.size())
+			bgfx::copy(&sphereInd[0], sizeof(sphereInd[0])* ((uint32_t)sphereInd.size()))
 		);
 #endif
 		// Create program from shaders.
