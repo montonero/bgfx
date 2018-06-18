@@ -4789,20 +4789,17 @@ BX_TRACE("%d, %d, %d, %s", _array, _srgb, _mipAutogen, getName(_format) );
 			bool normalized;
 			bool asInt;
 			_vertexDecl.decode(attr, num, type, normalized, asInt);
-			if (asInt) {
-				printf("as int!");
-			}
-
+			
 			if (-1 != loc)
 			{
 				if (UINT16_MAX != _vertexDecl.m_attributes[attr])
 				{
 					GL_CHECK(glEnableVertexAttribArray(loc) );
 					GL_CHECK(glVertexAttribDivisor(loc, 0) );
-					//printf("BGFX_CONFIG_RENDERER_OPENGL %d\n", BGFX_CONFIG_RENDERER_OPENGL);
+			
 					uint32_t baseVertex = _baseVertex*_vertexDecl.m_stride + _vertexDecl.m_offset[attr];
-					//if ( (BX_ENABLED(BGFX_CONFIG_RENDERER_OPENGL >= 30) ||  BX_ENABLED(BGFX_CONFIG_RENDERER_OPENGLES >= 31) )
-					if ((AttribType::Uint8 == type || AttribType::Int16 == type)
+					if ( (BX_ENABLED(BGFX_CONFIG_RENDERER_OPENGL >= 30) ||  BX_ENABLED(BGFX_CONFIG_RENDERER_OPENGLES >= 31) )
+					&& (AttribType::Uint8 == type || AttribType::Int16 == type)
 					&&  !normalized)
 					{
 						GL_CHECK(glVertexAttribIPointer(loc
@@ -4811,7 +4808,7 @@ BX_TRACE("%d, %d, %d, %s", _array, _srgb, _mipAutogen, getName(_format) );
 							, _vertexDecl.m_stride
 							, (void*)(uintptr_t)baseVertex)
 							);
-						printf("glVertexAttribIPointer %d\n", num);
+						// printf("glVertexAttribIPointer %d\n", num);
 					}
 					else
 					{

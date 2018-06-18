@@ -123,17 +123,20 @@ constexpr uint32_t packRgb8_255(uint8_t x, uint8_t y, uint8_t z) {
 
 struct PosColorVertexPacked
 {
+	/*
 	float    m_x;
 	float    m_y;
 	float    m_z;
-	// uint32_t pos_;
+	*/
+	uint32_t pos_;
 	uint32_t color;
 
 	static void init()
 	{
 		ms_decl.begin()
 			// .add(bgfx::Attrib::Position, 4, bgfx::AttribType::Uint8, false, true)
-			.add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+			// .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+			.add(bgfx::Attrib::Color2, 4, bgfx::AttribType::Uint8, false, true)
 			.add(bgfx::Attrib::Color1, 4, bgfx::AttribType::Uint8, false, true)
 			.end();
 	}
@@ -152,16 +155,24 @@ constexpr PosColorVertexPacked encode_vertex99(int8_t x,int8_t y,int8_t z,int8_t
 constexpr PosColorVertexPacked encode_vertex1(int8_t x,int8_t y,int8_t z,int8_t r,int8_t g,int8_t b) {
 	return { packRgb8(x,y,z), packRgb8f(r,g,b)};
 }
-*/
 
-constexpr PosColorVertexPacked encode_vertex(int8_t x,int8_t y,int8_t z,uint8_t r,uint8_t g,uint8_t b) {
+
+constexpr PosColorVertexPacked encode_vertex(uint8_t x, uint8_t y, uint8_t z,uint8_t r,uint8_t g,uint8_t b) {
 	return { float(x)*0.5f, float(y)*0.5f, float(z)*0.5f, packRgb8(r,g,b)};
 }
+*/
 
+constexpr uint32_t stb_encode32(uint8_t x, uint8_t y, uint8_t z) {
+	return x + (y << 7) + (z << 14);
+}
+
+constexpr PosColorVertexPacked encode_vertex(uint8_t x, uint8_t y, uint8_t z,uint8_t r,uint8_t g,uint8_t b) {
+	return { stb_encode32(x,y,z), packRgb8(r,g,b)};
+}
 
 static PosColorVertexPacked s_voxelVerts[] = 
 {
-	encode_vertex(-1, 0, 0, 100, 55, 250),
+	encode_vertex(0, 0, 0, 100, 55, 250),
 	encode_vertex(1, 0, 0, 110, 55, 250),
 	encode_vertex(1, 1, 0, 110, 55, 250),
 	encode_vertex(0, 1, 0, 110, 55, 250)
@@ -303,6 +314,7 @@ static const uint16_t s_cubeTriStrip[] =
 
 #endif
 
+
 class ExampleCubes : public entry::AppI
 {
 public:
@@ -317,6 +329,7 @@ public:
 
 	void init(int32_t _argc, const char* const* _argv, uint32_t _width, uint32_t _height) override
 	{
+		
 		auto szvp = sizeof(PosColorVertexPacked);
 		tfm::printf("Size of PosColorVertexPacked: %d", szvp);
 
@@ -412,13 +425,14 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 		/// 33
 
 		PosColorVertexPacked::init();
-		
+		/*
 		vbh_voxel_ = bgfx::createVertexBuffer(
 			bgfx::makeRef(s_voxelVerts, sizeof(s_voxelVerts)),
 			PosColorVertexPacked::ms_decl);
 		ibh_voxel_ = bgfx::createIndexBuffer(
 			bgfx::makeRef(s_voxelIndices, sizeof(s_voxelIndices)));
 		program_voxel_ = loadProgram("vs_voxel", "fs_cubes");
+		*/
 
 		m_timeOffset = bx::getHPCounter();
 
@@ -480,12 +494,38 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 		//tfm::printf("rgb: %d\n", rgb[2][4][kSizeMesh-1].b);
 
 		int size_per_quad = stbvox_get_buffer_size_per_quad(&mesh_maker_, 0);
-		tfm::printf("%s\n", size_per_quad);
+		tfm::printf("size per quad: %d\n", size_per_quad);
 
 		int res = stbvox_make_mesh(&mesh_maker_);
-		tfm::printf("%d\n", res);
-		std::ptrdiff_t num_vertices = ((std::ptrdiff_t)mesh_maker_.output_cur[0][0] - (std::ptrdiff_t)mesh_maker_.output_buffer[0][0]) / 32;
-		tfm::printf("Total number vertices: %d\n", num_vertices);
+		tfm::printf("\nresult%d\n", res);
+		void* voxel_vertex_data = mesh_maker_.output_cur[0][0];
+		std::ptrdiff_t vertex_data_sz = ((std::ptrdiff_t)mesh_maker_.output_cur[0][0] - (std::ptrdiff_t)mesh_maker_.output_buffer[0][0]);
+		auto num_faces = vertex_data_sz / 32;
+		tfm::printf("Total number faces: %d\n", num_faces);
+		uint32_t num_vertices = num_faces * 4;
+
+		uint32_t num_indices = num_faces*6;
+		uint16_t* indices = new uint16_t[num_indices];
+
+		for (uint32_t i = 0; i < num_faces; ++i) {
+			indices[i*6 + 0] = 0 + i*4;
+			indices[i*6 + 1] = 1 + i*4;
+			indices[i*6 + 2] = 2 + i*4;
+			indices[i*6 + 3] = 1 + i*4;
+			indices[i*6 + 4] = 3 + i*4;
+			indices[i*6 + 5] = 2 + i*4;
+		}
+
+		vbh_voxel_ = bgfx::createVertexBuffer(
+			bgfx::copy(voxel_vertex_data, 8*num_vertices),
+			PosColorVertexPacked::ms_decl);
+		ibh_voxel_ = bgfx::createIndexBuffer(
+			bgfx::copy(indices, sizeof(uint16_t)*num_indices));
+
+		delete[] indices;
+
+		program_voxel_ = loadProgram("vs_voxel", "fs_cubes");
+
 	}
 
 
