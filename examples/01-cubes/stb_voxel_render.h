@@ -1315,8 +1315,6 @@ struct stbvox_mesh_maker
 
 #if defined(STBVOX_ICONFIG_VERTEX_32)
    typedef stbvox_uint32 stbvox_mesh_vertex;
-   //#define stbvox_vertex_encode(x,y,z,ao,texlerp) \
-   //   ((stbvox_uint32) ((x)+((y)<<7)+((z)<<14)+((ao)<<23)+((texlerp)<<29)))
    constexpr stbvox_mesh_vertex stbvox_vertex_encode(uint8_t x, uint8_t y, uint8_t z, uint8_t ao, uint8_t texlerp) {
 	   return ((stbvox_uint32)(x + (y << 7) + (z << 14) + ((ao) << 23) + ((texlerp) << 29)));
    }

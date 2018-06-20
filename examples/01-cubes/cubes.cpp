@@ -535,14 +535,14 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 
 		delete[] indices;
 
-		program_voxel_ = loadProgram("vs_voxel", "fs_cubes");
+		program_voxel_ = loadProgram("vs_voxel", "fs_voxel");
 
 		// Init camera
 		cameraCreate();
-		float camPos[] = { 0.0f, 1.5f, 0.0f };
+		// float camPos[] = { 0.0f, 1.5f, 0.0f };
 		float eye[3] = { 0.0f, 3.0f, -6.0f };
 //		float eye[3] = { 0.0f, 30.0f, -60.0f };
-		float at[3] = { 0.0f,  5.0f,   0.0f };
+		// float at[3] = { 0.0f,  5.0f,   0.0f };
 		cameraSetPosition(eye);
 		cameraSetVerticalAngle(-0.3f);
 		
@@ -660,7 +660,7 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 			//float eye[3] = { 0.0f, 0.0f, -35.0f };
 
 			float eye[3] = { 0.0f, 30.0f, -60.0f };
-			float at[3] = { 0.0f,  5.0f,   0.0f };
+			// float at[3] = { 0.0f,  5.0f,   0.0f };
 
 			// Set view and projection matrix for view 0.
 			const bgfx::HMD* hmd = bgfx::getHMD();

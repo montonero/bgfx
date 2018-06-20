@@ -103,7 +103,7 @@ public:
 			PosColorVertexPacked::ms_decl);
 		ibh_voxel_ = bgfx::createIndexBuffer(
 			bgfx::makeRef(s_voxelIndices, sizeof(s_voxelIndices)));
-		program_voxel_ = loadProgram("vs_voxel1", "fs_voxel1");
+		//program_voxel_ = loadProgram("vs_voxel1", "fs_voxel1");
 
 
 

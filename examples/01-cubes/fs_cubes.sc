@@ -1,4 +1,5 @@
 $input v_color0
+//$out fragColor;
 
 /*
  * Copyright 2011-2018 Branimir Karadzic. All rights reserved.
@@ -10,4 +11,5 @@ $input v_color0
 void main()
 {
 	gl_FragColor = v_color0;
+	//fragColor = v_color0;
 }

@@ -1,12 +1,7 @@
 //$input a_position, a_color1
 $input a_color1, a_color2
 
-$output v_color0
-
-/*
- * Copyright 2011-2018 Branimir Karadzic. All rights reserved.
- * License: https://github.com/bkaradzic/bgfx#license-bsd-2-clause
- */
+$output v_color0, facedata
 
 #include "../common/common.sh"
 
@@ -30,6 +25,8 @@ void main()
 
     col = col / 256.0;
     v_color0 = vec4(col, 1.0);
+
+    facedata = a_color1;
 
     gl_Position = mul(u_modelViewProj, vec4(offset, 1.0) );
  
