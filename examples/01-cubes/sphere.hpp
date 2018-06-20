@@ -4,7 +4,7 @@
 #include <cmath>
 #include <array>
 
-using Index = std::uint32_t;
+using Index = std::uint16_t;
 
 struct v3{
     float x;

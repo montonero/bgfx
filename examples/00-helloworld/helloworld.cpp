@@ -12,6 +12,54 @@
 namespace
 {
 
+struct PosColorVertexPacked
+{
+	uint32_t pos;
+	uint32_t color;
+
+	static void init()
+	{
+		// Use Color2 for packed position
+		ms_decl.begin()
+			.add(bgfx::Attrib::Color2, 4, bgfx::AttribType::Uint8, false, true)
+			.add(bgfx::Attrib::Color1, 4, bgfx::AttribType::Uint8, false, true)
+			.end();
+	}
+	static bgfx::VertexDecl ms_decl;
+};
+
+bgfx::VertexDecl PosColorVertexPacked::ms_decl;
+
+
+
+constexpr uint32_t packRgb8(uint8_t x, uint8_t y, uint8_t z) {
+	return (uint32_t)(x + ((uint32_t)y << 8) + ((uint32_t)z << 16));
+}
+
+// NOTE: shifting left for 7 and 14
+constexpr uint32_t stb_encode32(uint8_t x, uint8_t y, uint8_t z) {
+	return x + (y << 7) + (z << 14);
+}
+
+constexpr PosColorVertexPacked encode_vertex(uint8_t x, uint8_t y, uint8_t z, uint8_t r, uint8_t g, uint8_t b) {
+	return { stb_encode32(x,y,z), packRgb8(r,g,b) };
+}
+
+static PosColorVertexPacked s_voxelVerts[] =
+{
+	encode_vertex(0, 0, 1, 100, 55, 250),
+	encode_vertex(1, 0, 1, 110, 55, 250),
+	encode_vertex(1, 1, 1, 110, 55, 250),
+	encode_vertex(0, 1, 1, 110, 55, 250)
+};
+
+
+static const uint16_t s_voxelIndices[] =
+{
+	0, 1, 2,
+	0, 3, 2,
+};
+
 class ExampleHelloWorld : public entry::AppI
 {
 public:
@@ -47,6 +95,17 @@ public:
 			, 1.0f
 			, 0
 			);
+
+		PosColorVertexPacked::init();
+
+		vbh_voxel_ = bgfx::createVertexBuffer(
+			bgfx::makeRef(s_voxelVerts, sizeof(s_voxelVerts)),
+			PosColorVertexPacked::ms_decl);
+		ibh_voxel_ = bgfx::createIndexBuffer(
+			bgfx::makeRef(s_voxelIndices, sizeof(s_voxelIndices)));
+		program_voxel_ = loadProgram("vs_voxel1", "fs_voxel1");
+
+
 
 		imguiCreate();
 	}
@@ -125,6 +184,11 @@ public:
 	uint32_t m_height;
 	uint32_t m_debug;
 	uint32_t m_reset;
+
+
+	bgfx::VertexBufferHandle vbh_voxel_;
+	bgfx::IndexBufferHandle ibh_voxel_;
+	bgfx::ProgramHandle program_voxel_;
 };
 
 } // namespace

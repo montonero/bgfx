@@ -2,13 +2,14 @@
  * Copyright 2011-2018 Branimir Karadzic. All rights reserved.
  * License: https://github.com/bkaradzic/bgfx#license-bsd-2-clause
  */
+#include <random>
 
 #include "common.h"
 #include "bgfx_utils.h"
 #include "imgui/imgui.h"
 
 #include "sphere.hpp"
-
+#include "camera.h"
 
 BX_PRAGMA_DIAGNOSTIC_PUSH()
 
@@ -52,6 +53,10 @@ BX_PRAGMA_DIAGNOSTIC_POP()
 
 namespace
 {
+template <typename T>
+const bgfx::Memory* copyFromVector(T& vec) {
+	return bgfx::copy(&vec[0], sizeof(vec[0])*((uint32_t)vec.size()));
+}
 
 constexpr uint32_t kSizeMesh{16};
 
@@ -172,10 +177,10 @@ constexpr PosColorVertexPacked encode_vertex(uint8_t x, uint8_t y, uint8_t z,uin
 
 static PosColorVertexPacked s_voxelVerts[] = 
 {
-	encode_vertex(0, 0, 0, 100, 55, 250),
-	encode_vertex(1, 0, 0, 110, 55, 250),
-	encode_vertex(1, 1, 0, 110, 55, 250),
-	encode_vertex(0, 1, 0, 110, 55, 250)
+	encode_vertex(0, 0, 1, 100, 55, 250),
+	encode_vertex(1, 0, 1, 110, 55, 250),
+	encode_vertex(1, 1, 1, 110, 55, 250),
+	encode_vertex(0, 1, 1, 110, 55, 250)
 };
 
 
@@ -393,7 +398,8 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 		//bgfx::copy 
 		PositionOnlyVertex::init();
 		m_vbh = bgfx::createVertexBuffer(
-			bgfx::copy(&sphereVert[0], sizeof(sphereVert[0])*((uint32_t)sphereVert.size())),
+			//bgfx::copy(&sphereVert[0], sizeof(sphereVert[0])*((uint32_t)sphereVert.size())),
+			copyFromVector(sphereVert),
 			PositionOnlyVertex::ms_decl
 		);
 
@@ -423,9 +429,11 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 
 
 		/// 33
-
 		PosColorVertexPacked::init();
+
 		/*
+		
+		
 		vbh_voxel_ = bgfx::createVertexBuffer(
 			bgfx::makeRef(s_voxelVerts, sizeof(s_voxelVerts)),
 			PosColorVertexPacked::ms_decl);
@@ -498,21 +506,24 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 
 		int res = stbvox_make_mesh(&mesh_maker_);
 		tfm::printf("\nresult%d\n", res);
-		void* voxel_vertex_data = mesh_maker_.output_cur[0][0];
-		std::ptrdiff_t vertex_data_sz = ((std::ptrdiff_t)mesh_maker_.output_cur[0][0] - (std::ptrdiff_t)mesh_maker_.output_buffer[0][0]);
+		
+		uint32_t vertex_data_sz = (uint32_t) ((std::ptrdiff_t)mesh_maker_.output_cur[0][0] - (std::ptrdiff_t)mesh_maker_.output_buffer[0][0]);
 		auto num_faces = vertex_data_sz / 32;
 		tfm::printf("Total number faces: %d\n", num_faces);
+
+		
+		uint32_t* voxel_vertex_data = (uint32_t*) mesh_maker_.output_buffer[0][0];
 		uint32_t num_vertices = num_faces * 4;
 
 		uint32_t num_indices = num_faces*6;
 		uint16_t* indices = new uint16_t[num_indices];
 
-		for (uint32_t i = 0; i < num_faces; ++i) {
+		for (uint16_t i = 0; i < num_faces; ++i) {
 			indices[i*6 + 0] = 0 + i*4;
 			indices[i*6 + 1] = 1 + i*4;
 			indices[i*6 + 2] = 2 + i*4;
-			indices[i*6 + 3] = 1 + i*4;
-			indices[i*6 + 4] = 3 + i*4;
+			indices[i*6 + 3] = 3 + i*4;
+			indices[i*6 + 4] = 0 + i*4;
 			indices[i*6 + 5] = 2 + i*4;
 		}
 
@@ -526,10 +537,24 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 
 		program_voxel_ = loadProgram("vs_voxel", "fs_cubes");
 
+		// Init camera
+		cameraCreate();
+		float camPos[] = { 0.0f, 1.5f, 0.0f };
+		float eye[3] = { 0.0f, 3.0f, -6.0f };
+//		float eye[3] = { 0.0f, 30.0f, -60.0f };
+		float at[3] = { 0.0f,  5.0f,   0.0f };
+		cameraSetPosition(eye);
+		cameraSetVerticalAngle(-0.3f);
+		
 	}
 
 
+
 	void sphere(uint radius) {
+		std::random_device rd;  //Will be used to obtain a seed for the random number engine
+		std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+		std::uniform_int_distribution<short> dis(100, 255);
+
 		int counter{ 0 };
 		constexpr uint c = kSizeMesh / 2;
 		auto rsq = radius*radius;
@@ -543,10 +568,11 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 						set_voxel_color(std::make_tuple(x + 1, y + 1, z + 1), { 200, 20, 100 });
 						counter++;
 					}
+					lighting_[x + 1][y + 1][z + 1] = (uint8_t) dis(gen);
 				}
 			}
 		}
-		tfm::printf("Num of voxels: %d", counter);
+		tfm::printf("Num of voxels: %d\n", counter);
 		
 	}
 	
@@ -558,7 +584,7 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 		rgb_[x][y][z] = color;
 		blocktype_[x][y][z] = 1;
 	// blocktype_[x][y][z] = STBVOX_GEOM_solid;
-		lighting_[x][y][z] = 255;
+		lighting_[x][y][z] = 2;
 	}
 
 	virtual int shutdown() override
@@ -580,6 +606,20 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 	{
 		if (!entry::processEvents(m_width, m_height, m_debug, m_reset, &m_mouseState) )
 		{
+			// Update frame timer
+			int64_t now = bx::getHPCounter();
+			static int64_t last = now;
+			const int64_t frameTime = now - last;
+			last = now;
+			const double freq = double(bx::getHPFrequency());
+			const float deltaTime = float(frameTime / freq);
+
+			// Update camera
+			cameraUpdate(deltaTime*0.15f, m_mouseState);
+
+			float view[16];
+			cameraGetViewMtx(view);
+
 			imguiBeginFrame(m_mouseState.m_mx
 				,  m_mouseState.m_my
 				, (m_mouseState.m_buttons[entry::MouseButton::Left  ] ? IMGUI_MBUT_LEFT   : 0)
@@ -626,7 +666,6 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 			const bgfx::HMD* hmd = bgfx::getHMD();
 			if (NULL != hmd && 0 != (hmd->flags & BGFX_HMD_RENDERING) )
 			{
-				float view[16];
 				bx::mtxQuatTranslationHMD(view, hmd->eye[0].rotation, eye);
 				bgfx::setViewTransform(0, view, hmd->eye[0].projection, BGFX_VIEW_STEREO, hmd->eye[1].projection);
 
@@ -638,8 +677,8 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 			}
 			else
 			{
-				float view[16];
-				bx::mtxLookAt(view, eye, at);
+			
+				//bx::mtxLookAt(view, eye, at);
 
 				float proj[16];
 				bx::mtxProj(proj, 60.0f, float(m_width)/float(m_height), 0.1f, 100.0f, bgfx::getCaps()->homogeneousDepth);
@@ -691,7 +730,7 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 						| BGFX_STATE_CULL_CW
 						// | BGFX_STATE_CULL_CCW
 						| BGFX_STATE_MSAA
-						| BGFX_STATE_PT_TRISTRIP
+						| BGFX_STATE_PT_LINESTRIP
 						);
 
 					// Submit primitive for rendering to view 0.
@@ -699,7 +738,7 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 				}
 			}
 
-			#if 0
+			#if 1
 			float mtxFloor[16];
 			bx::mtxSRT(mtxFloor
 				, 30.0f, 30.0f, 30.0f
@@ -749,10 +788,12 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 						| BGFX_STATE_WRITE_RGB
 						| BGFX_STATE_WRITE_Z
 						| BGFX_STATE_DEPTH_TEST_LESS
-						| BGFX_STATE_CULL_CW
-						// | BGFX_STATE_CULL_CCW
+						//| BGFX_STATE_CULL_CW
+						| BGFX_STATE_CULL_CCW
 						| BGFX_STATE_MSAA
-						| BGFX_STATE_PT_TRISTRIP
+						//| BGFX_STATE_PT_TRISTRIP
+				//| BGFX_STATE_PT_LINES
+				//| BGFX_STATE_PT_TRISTRIP
 						);
 
 			bgfx::submit(0, program_voxel_);
