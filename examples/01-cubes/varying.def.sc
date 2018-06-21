@@ -1,5 +1,9 @@
 vec4 v_color0    : COLOR0    = vec4(1.0, 0.0, 0.0, 1.0);
 flat uvec4 facedata: COLOR3;
+vec3 v_normal: NORMAL = vec3(0.0, 0.0, 1.0);
+
+float amb_occ : FOG;
+
 
 vec3 a_position  : POSITION;
 uvec4 a_color2  : COLOR2;

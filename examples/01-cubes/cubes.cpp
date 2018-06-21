@@ -537,6 +537,13 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 
 		program_voxel_ = loadProgram("vs_voxel", "fs_voxel");
 
+		uNormals_[0] = bgfx::createUniform("u_normal_table_0", bgfx::UniformType::Mat3);
+		uNormals_[1] = bgfx::createUniform("u_normal_table_1", bgfx::UniformType::Mat3);
+		memcpy(&normals_[0], &stbvox_default_normals[0], sizeof(float)*9);
+		memcpy(&normals_[1], &stbvox_default_normals[3], sizeof(float)*9);
+
+		uAmbient_ = bgfx::createUniform("u_ambient", bgfx::UniformType::Mat4);
+
 		// Init camera
 		cameraCreate();
 		// float camPos[] = { 0.0f, 1.5f, 0.0f };
@@ -764,6 +771,12 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 			#endif
 
 
+			// VOXELS
+			bgfx::setUniform(uNormals_[0], &normals_[0]);
+			bgfx::setUniform(uNormals_[1], &normals_[1]);
+
+			bgfx::setUniform(uAmbient_, &stbvox_default_ambient[0][0]);
+
 			float mtxIdentity[16];
 			bx::mtxIdentity(mtxIdentity);
 			
@@ -817,6 +830,12 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 	bgfx::VertexBufferHandle m_vbh, m_vbh2, vbh_voxel_;
 	bgfx::IndexBufferHandle m_ibh, m_ibh2, ibh_voxel_;
 	bgfx::ProgramHandle m_program, m_program2, program_voxel_;
+
+	bgfx::UniformHandle uNormals_[2];
+	float normals_[2][3][3];
+
+	bgfx::UniformHandle uAmbient_;
+
 	int64_t m_timeOffset;
 
 	bool m_r;
