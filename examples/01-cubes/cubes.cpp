@@ -58,7 +58,7 @@ const bgfx::Memory* copyFromVector(T& vec) {
 	return bgfx::copy(&vec[0], sizeof(vec[0])*((uint32_t)vec.size()));
 }
 
-constexpr uint32_t kSizeMesh{3};
+constexpr uint32_t kSizeMesh{16};
 
 constexpr uint32_t kSizeMeshPlus2 = kSizeMesh + 2;
 
@@ -483,6 +483,8 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 		geomForBlockType[1] = STBVOX_GEOM_solid;
 		#endif
 
+
+		memset(lighting_, 200, sizeof(lighting_));
 		// Generate sphere
 		sphere(9);
 
@@ -572,7 +574,7 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 				for (uint z = 0; z < kSizeMesh; z++) {
 					auto z2 = (z-c)*(z-c);
 					if (x2 + y2 + z2 <= rsq) {
-						set_voxel_color(std::make_tuple(x + 1, y + 1, z + 1), { 200, 20, 100 });
+						set_voxel_color(std::make_tuple(x + 1, y + 1, z + 1), { 00, 20, 180 });
 						counter++;
 					}
 //					lighting_[x + 1][y + 1][z + 1] = (uint8_t) dis(gen);
@@ -803,7 +805,7 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 						| BGFX_STATE_WRITE_Z
 						| BGFX_STATE_DEPTH_TEST_LESS
 						//| BGFX_STATE_CULL_CW
-						| BGFX_STATE_CULL_CCW
+						//| BGFX_STATE_CULL_CCW
 						| BGFX_STATE_MSAA
 						//| BGFX_STATE_PT_TRISTRIP
 				//| BGFX_STATE_PT_LINES
