@@ -1,4 +1,6 @@
 $input a_color1, a_color2
+
+//$input a_color1, a_position
 $output v_color0, facedata, amb_occ, v_normal
 
 #include "../common/common.sh"
@@ -7,6 +9,8 @@ uniform mat3 u_normal_table_0;
 uniform mat3 u_normal_table_1;
 
 uniform mat4 u_ambient;
+
+//#define a_color2 a_position
 
 void main()
 {
@@ -28,11 +32,17 @@ void main()
     facedata = a_color1;
         
     int normal_face = int(facedata.w >> 2u) & 31;
-    if (normal_face < 3)
-        v_normal = u_normal_table_0[normal_face];
+    if (normal_face < 3) {
+        v_normal.x = u_normal_table_0[0][normal_face];
+        v_normal.y = u_normal_table_0[1][normal_face];
+        v_normal.z = u_normal_table_0[2][normal_face];
+    }
     else {
-        int idx = normal_face - 3;
-        v_normal = u_normal_table_1[normal_face - 3];
+        //int idx = normal_face - 3;
+        normal_face = normal_face - 3;
+        v_normal.x = u_normal_table_1[0][normal_face];
+        v_normal.y = u_normal_table_1[1][normal_face];
+        v_normal.z = u_normal_table_1[2][normal_face];
     }
     
     col = col / 256.0;

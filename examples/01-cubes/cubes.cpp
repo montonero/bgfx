@@ -58,7 +58,7 @@ const bgfx::Memory* copyFromVector(T& vec) {
 	return bgfx::copy(&vec[0], sizeof(vec[0])*((uint32_t)vec.size()));
 }
 
-constexpr uint32_t kSizeMesh{16};
+constexpr uint32_t kSizeMesh{3};
 
 constexpr uint32_t kSizeMeshPlus2 = kSizeMesh + 2;
 
@@ -139,9 +139,9 @@ struct PosColorVertexPacked
 	static void init()
 	{
 		ms_decl.begin()
-			// .add(bgfx::Attrib::Position, 4, bgfx::AttribType::Uint8, false, true)
+			.add(bgfx::Attrib::Position, 4, bgfx::AttribType::Uint8, false, true)
 			// .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
-			.add(bgfx::Attrib::Color2, 4, bgfx::AttribType::Uint8, false, true)
+//			.add(bgfx::Attrib::Color2, 4, bgfx::AttribType::Uint8, false, true)
 			.add(bgfx::Attrib::Color1, 4, bgfx::AttribType::Uint8, false, true)
 			.end();
 	}
@@ -576,7 +576,8 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 						set_voxel_color(std::make_tuple(x + 1, y + 1, z + 1), { 200, 20, 100 });
 						counter++;
 					}
-					lighting_[x + 1][y + 1][z + 1] = (uint8_t) dis(gen);
+//					lighting_[x + 1][y + 1][z + 1] = (uint8_t) dis(gen);
+					lighting_[x + 1][y + 1][z + 1] = (uint8_t)200;
 				}
 			}
 		}
@@ -592,7 +593,7 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 		rgb_[x][y][z] = color;
 		blocktype_[x][y][z] = 1;
 	// blocktype_[x][y][z] = STBVOX_GEOM_solid;
-		lighting_[x][y][z] = 2;
+		lighting_[x][y][z] = 100;
 	}
 
 	virtual int shutdown() override
@@ -776,7 +777,7 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 			bgfx::setUniform(uNormals_[0], &normals_[0]);
 			bgfx::setUniform(uNormals_[1], &normals_[1]);
 
-			bgfx::setUniform(uAmbient_, &stbvox_default_ambient[0][0]);
+			bgfx::setUniform(uAmbient_, stbvox_default_ambient);
 
 			float mtxIdentity[16];
 			bx::mtxIdentity(mtxIdentity);
