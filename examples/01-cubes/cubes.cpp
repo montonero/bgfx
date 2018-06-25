@@ -509,6 +509,7 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 		int res = stbvox_make_mesh(&mesh_maker_);
 		tfm::printf("\nresult%d\n", res);
 		
+		// todo use get_quad_count
 		uint32_t vertex_data_sz = (uint32_t) ((std::ptrdiff_t)mesh_maker_.output_cur[0][0] - (std::ptrdiff_t)mesh_maker_.output_buffer[0][0]);
 		auto num_faces = vertex_data_sz / 32;
 		tfm::printf("Total number faces: %d\n", num_faces);
