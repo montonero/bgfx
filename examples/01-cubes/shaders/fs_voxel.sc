@@ -43,7 +43,4 @@ void main()
 
 	gl_FragColor = vec4(lit_color, fragment_alpha);
 
-	
-	
-	//gl_FragColor = vec4(color.xyz, 1.0);
 }

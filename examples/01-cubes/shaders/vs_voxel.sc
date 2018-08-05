@@ -1,7 +1,6 @@
 $input a_position, a_color1
 // a_color1 -- facedata (xyz - rgb), w - normal
 
-//$input a_color1, a_position
 $output facedata, amb_occ, v_normal
 
 #include "../../common/common.sh"
@@ -22,14 +21,16 @@ void main()
     
     // reconstruct uint32 from components
     uint posU = a_position.x + (a_position.y << 8u) + (a_position.z << 16u) + (a_position.w << 24u);
-    //uint posU = uint(a_position.xyzw);
+    //uint posU = uint(a_position);
+    
     vec3 offset;
     offset.x = float( (posU) & 127u );
     offset.y = float( (posU >> 7u) & 127u);
     offset.z = float( (posU >> 14u) & 511u) * 0.5;
-    amb_occ = float( (posU >> 23u) & 63u ) / 63.0;
-    //amb_occ = 1.0;
+    //amb_occ = float( (posU >> 23u) & 63u ) / 63.0;
+    amb_occ = 1.0;
     // also tex_lerp here
+    float texlerp  = float( (posU >> 29u)        ) /  7.0;     // a[29..31]
 
 
     facedata = a_color1;
@@ -49,8 +50,5 @@ void main()
     }
     
     col = col / 256.0;
-    //v_color0 = vec4(col, 1.0);
-
-    
     gl_Position = mul(u_modelViewProj, vec4(offset, 1.0) );
  }
