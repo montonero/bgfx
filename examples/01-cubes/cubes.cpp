@@ -575,11 +575,11 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 				for (uint z = 0; z < kSizeMesh; z++) {
 					auto z2 = (z-c)*(z-c);
 					if (x2 + y2 + z2 <= rsq) {
-						set_voxel_color(std::make_tuple(x + 1, y + 1, z + 1), { 00, 20, 180 });
+						set_voxel_color(std::make_tuple(x + 1, y + 1, z + 1), { 00, 200, 180 });
 						counter++;
 					}
 //					lighting_[x + 1][y + 1][z + 1] = (uint8_t) dis(gen);
-					lighting_[x + 1][y + 1][z + 1] = (uint8_t)200;
+					lighting_[x + 1][y + 1][z + 1] = (uint8_t)240;
 				}
 			}
 		}
@@ -595,7 +595,7 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 		rgb_[x][y][z] = color;
 		blocktype_[x][y][z] = 1;
 	// blocktype_[x][y][z] = STBVOX_GEOM_solid;
-		lighting_[x][y][z] = 100;
+		lighting_[x][y][z] = 200;
 	}
 
 	virtual int shutdown() override
