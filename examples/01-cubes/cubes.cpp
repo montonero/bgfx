@@ -579,7 +579,7 @@ BX_UNUSED(s_cubeTriList, s_cubeTriStrip);
 						counter++;
 					}
 //					lighting_[x + 1][y + 1][z + 1] = (uint8_t) dis(gen);
-					lighting_[x + 1][y + 1][z + 1] = (uint8_t)200;
+					lighting_[x + 1][y + 1][z + 1] = (uint8_t)240;
 				}
 			}
 		}
